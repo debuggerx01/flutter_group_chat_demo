@@ -1,66 +1,35 @@
-import 'package:chat_bubbles/bubbles/bubble_special_one.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_group_chat_demo/chat_list_view_controller.dart';
 
-typedef OnAddChatItemHandler = void Function(ChatItem);
+typedef OnAddChatItemHandler<T> = void Function(T item);
 typedef OnClearHandler = void Function();
 typedef OnJumpToBottom = void Function();
+typedef ChatItemComparator<T> = bool Function(T a, T b);
+typedef ChatMessageWidgetBuilder<T> = Widget Function(T item);
 
-@immutable
-class ChatItem {
-  final bool isSelf;
-  final String content;
-
-  const ChatItem({
-    required this.isSelf,
-    required this.content,
-  });
-}
-
-class ChatListController {
-  OnAddChatItemHandler? onAddChatItemHandler;
-  OnClearHandler? onClearHandler;
-  OnJumpToBottom? onJumpToBottom;
-
-  void addChatItem(ChatItem item) => onAddChatItemHandler?.call(item);
-
-  void clear() => onClearHandler?.call();
-
-  void setHandlers({
-    required OnAddChatItemHandler onAddChatItemHandler,
-    required OnClearHandler onClearHandler,
-    required OnJumpToBottom onJumpToBottom,
-  }) {
-    this.onAddChatItemHandler = onAddChatItemHandler;
-    this.onClearHandler = onClearHandler;
-    this.onJumpToBottom = onJumpToBottom;
-  }
-
-  void jumpToBottom() {
-    onJumpToBottom?.call();
-  }
-}
-
-class ChatListView extends StatefulWidget {
-  final ChatListController chatListController;
+class ChatListView<T> extends StatefulWidget {
+  final ChatListController<T> chatListController;
+  final ChatMessageWidgetBuilder<T> itemBuilder;
 
   const ChatListView({
     Key? key,
     required this.chatListController,
+    required this.itemBuilder,
   }) : super(key: key);
 
   @override
-  State<ChatListView> createState() => _ChatListViewState();
+  State<ChatListView> createState() => _ChatListViewState<T>();
 }
 
-class _ChatListViewState extends State<ChatListView> {
+class _ChatListViewState<T> extends State<ChatListView<T>> {
   final ScrollController _listViewScrollController = ScrollController();
   final ScrollController _singleChildScrollController = ScrollController();
   late ScrollController _activeScrollController;
   Drag? _drag;
 
-  List<ChatItem> chatList = [];
-  List<ChatItem> backLogChatList = [];
+  final List<T> chatList = [];
+  final List<T> backLogChatList = [];
 
   bool get hovering =>
       (_listViewScrollController.hasClients && _listViewScrollController.offset > 0) ||
@@ -68,8 +37,22 @@ class _ChatListViewState extends State<ChatListView> {
 
   @override
   void initState() {
-    widget.chatListController.setHandlers(
-      onAddChatItemHandler: (item) {
+    widget.chatListController.setupHandlers(
+      handleAddChatItem: (item) {
+        var existedIndex = backLogChatList.indexWhere(
+          (element) => widget.chatListController.chatItemComparator(element, item),
+        );
+        if (existedIndex > -1) {
+          return setState(() {
+            backLogChatList[existedIndex] = item;
+          });
+        }
+        existedIndex = chatList.indexWhere((element) => widget.chatListController.chatItemComparator(element, item));
+        if (existedIndex > -1) {
+          return setState(() {
+            chatList[existedIndex] = item;
+          });
+        }
         setState(() {
           if (hovering) {
             backLogChatList.add(item);
@@ -78,13 +61,13 @@ class _ChatListViewState extends State<ChatListView> {
           }
         });
       },
-      onClearHandler: () {
+      handleClear: () {
         setState(() {
           chatList.clear();
           backLogChatList.clear();
         });
       },
-      onJumpToBottom: () {
+      handleJumpToBottom: () {
         if (_listViewScrollController.hasClients) {
           _listViewScrollController.jumpTo(0);
         }
@@ -133,28 +116,13 @@ class _ChatListViewState extends State<ChatListView> {
                               controller: _listViewScrollController,
                               itemCount: chatList.length,
                               reverse: true,
-                              itemBuilder: (context, index) {
-                                var chatItem = chatList[index];
-                                return BubbleSpecialOne(
-                                  text: chatItem.content,
-                                  color: chatItem.isSelf ? const Color(0xFF1B97F3) : const Color(0xFFA3A3A4),
-                                  textStyle: const TextStyle(color: Colors.white, fontSize: 16),
-                                  isSender: chatItem.isSelf,
-                                );
-                              },
+                              itemBuilder: (context, index) => widget.itemBuilder(chatList[index]),
                             ),
                           ),
                           Container(
                             color: Colors.yellow,
                             child: Column(
-                              children: backLogChatList
-                                  .map((chatItem) => BubbleSpecialOne(
-                                        text: chatItem.content,
-                                        color: chatItem.isSelf ? const Color(0xFF1B97F3) : const Color(0xFFA3A3A4),
-                                        textStyle: const TextStyle(color: Colors.white, fontSize: 16),
-                                        isSender: chatItem.isSelf,
-                                      ))
-                                  .toList(),
+                              children: backLogChatList.map(widget.itemBuilder).toList(),
                             ),
                           ),
                         ],
@@ -166,6 +134,8 @@ class _ChatListViewState extends State<ChatListView> {
       ),
     );
   }
+
+  final _voidCallback = () {};
 
   void _handleDragUpdate(DragUpdateDetails details) {
     late ScrollController _preferScrollController;
@@ -192,7 +162,7 @@ class _ChatListViewState extends State<ChatListView> {
             globalPosition: details.globalPosition,
             localPosition: details.localPosition,
           ),
-          () {});
+          _voidCallback);
     }
     _drag?.update(details);
   }
@@ -203,7 +173,7 @@ class _ChatListViewState extends State<ChatListView> {
     } else {
       _activeScrollController = _listViewScrollController;
     }
-    _drag = _activeScrollController.position.drag(details, () {});
+    _drag = _activeScrollController.position.drag(details, _voidCallback);
   }
 
   void _handleDragEnd(DragEndDetails details) {
