@@ -3,7 +3,7 @@
 A new Flutter project.
 
 ## Online Demo
-[flutter_group_chat_demo_web](http://www.debuggerx.com/flutter_group_chat_demo_web/#/)
+[flutter_group_chat_demo](http://www.debuggerx.com/flutter_group_chat_demo/#/)
 
 ## Getting Started
 
