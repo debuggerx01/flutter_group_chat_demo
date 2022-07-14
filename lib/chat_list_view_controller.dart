@@ -1,17 +1,26 @@
 import 'dart:async';
 
-import 'package:flutter_group_chat_demo/chat_list_view.dart';
+import 'package:flutter/material.dart';
+
+typedef OnAddMessageItemHandler<T> = void Function(T item);
+typedef OnClearHandler = void Function();
+typedef OnJumpToBottom = void Function();
+typedef MessageItemComparator<T> = bool Function(T a, T b);
+typedef ChatMessageWidgetBuilder<T> = Widget Function(T item);
+typedef OnFetchHistoryMessage<T> = List<T>? Function([T? lastMessageItem]);
 
 class MessageListController<T> {
   late OnAddMessageItemHandler<T> _onAddMessageItemHandler;
   late OnClearHandler _onClearHandler;
   late OnJumpToBottom _onJumpToBottom;
   final MessageItemComparator<T> messageItemComparator;
+  final OnFetchHistoryMessage<T> onFetchHistoryMessage;
   late StreamController<bool> _isHoveringController;
   late Stream<bool> _isHovering;
 
   MessageListController({
     required this.messageItemComparator,
+    required this.onFetchHistoryMessage,
   }) {
     _isHoveringController = StreamController()..add(false);
     _isHovering = _isHoveringController.stream.asBroadcastStream();

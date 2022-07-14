@@ -6,6 +6,7 @@ import 'package:dart_mock/dart_mock.dart' as mock;
 import 'package:flutter_group_chat_demo/chat_list_view_controller.dart';
 
 int counter = 0;
+int historyCount = 3;
 
 @immutable
 class MessageItem {
@@ -33,6 +34,17 @@ class _MyHomePageState extends State<MyHomePage> {
   final TextEditingController _textEditingController = TextEditingController();
   final MessageListController<MessageItem> _messageListController = MessageListController<MessageItem>(
     messageItemComparator: (a, b) => a.timeStamp == b.timeStamp,
+    onFetchHistoryMessage: ([lastMessageItem]) {
+      var t = (lastMessageItem?.timeStamp ?? DateTime.now()).millisecondsSinceEpoch;
+      if (--historyCount < 0) return null;
+      return List.generate(
+        10,
+        (index) => MessageItem(
+            isSelf: index.isEven,
+            content: '${10 - index} : ${mock.string(min: 20, max: 100)}',
+            timeStamp: DateTime.fromMillisecondsSinceEpoch(t - index - 1)),
+      );
+    },
   );
 
   @override

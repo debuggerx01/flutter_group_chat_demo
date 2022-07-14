@@ -2,12 +2,6 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_group_chat_demo/chat_list_view_controller.dart';
 
-typedef OnAddMessageItemHandler<T> = void Function(T item);
-typedef OnClearHandler = void Function();
-typedef OnJumpToBottom = void Function();
-typedef MessageItemComparator<T> = bool Function(T a, T b);
-typedef ChatMessageWidgetBuilder<T> = Widget Function(T item);
-
 class ChatListView<T> extends StatefulWidget {
   final MessageListController<T> chatListController;
   final ChatMessageWidgetBuilder<T> itemBuilder;
@@ -79,6 +73,9 @@ class _ChatListViewState<T> extends State<ChatListView<T>> {
       },
     );
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      _handleLoadHistoryMessages(widget.chatListController.onFetchHistoryMessage());
+    });
   }
 
   @override
@@ -131,7 +128,15 @@ class _ChatListViewState<T> extends State<ChatListView<T>> {
                               controller: _listViewScrollController,
                               itemCount: chatMessageList.length,
                               reverse: true,
-                              itemBuilder: (context, index) => widget.itemBuilder(chatMessageList[index]),
+                              itemBuilder: (context, index) {
+                                if (index == chatMessageList.length - 1) {
+                                  WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+                                    _handleLoadHistoryMessages(widget.chatListController
+                                        .onFetchHistoryMessage(chatMessageList.last));
+                                  });
+                                }
+                                return widget.itemBuilder(chatMessageList[index]);
+                              },
                             ),
                           ),
                           Container(
@@ -207,5 +212,13 @@ class _ChatListViewState<T> extends State<ChatListView<T>> {
       chatMessageList.insertAll(0, backLogList.reversed);
       backLogList.clear();
     });
+  }
+
+  void _handleLoadHistoryMessages(List<T>? historyMessages) {
+    if (historyMessages != null && historyMessages.isNotEmpty && mounted) {
+      setState(() {
+        chatMessageList.addAll(historyMessages);
+      });
+    }
   }
 }
