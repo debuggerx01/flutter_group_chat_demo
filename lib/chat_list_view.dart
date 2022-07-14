@@ -33,7 +33,8 @@ class _ChatListViewState<T> extends State<ChatListView<T>> {
 
   bool get hovering =>
       (_listViewScrollController.hasClients && _listViewScrollController.offset > 0) ||
-      (_singleChildScrollController.hasClients && _singleChildScrollController.position.extentAfter > 0);
+      (_singleChildScrollController.hasClients && _singleChildScrollController.position.extentAfter > 0) ||
+      backLogList.isNotEmpty;
 
   bool _preIsHovering = false;
 
@@ -100,10 +101,14 @@ class _ChatListViewState<T> extends State<ChatListView<T>> {
                   },
                   child: NotificationListener<ScrollNotification>(
                     onNotification: (notification) {
-                      if (notification is ScrollEndNotification && notification.metrics.extentAfter == 0.0) {
+                      if (notification is ScrollEndNotification &&
+                          notification.metrics.extentAfter == 0.0 &&
+                          _listViewScrollController.offset == 0.0) {
                         WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
                           handleClearBackLogList();
-                          widget.chatListController.updateHoveringStatus(false);
+                          if (_preIsHovering) {
+                            widget.chatListController.updateHoveringStatus(false);
+                          }
                           _preIsHovering = false;
                         });
                       } else {
