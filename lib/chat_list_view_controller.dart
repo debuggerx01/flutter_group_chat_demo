@@ -12,7 +12,8 @@ class MessageListController<T> {
 
   MessageListController({
     required this.messageItemComparator,
-  }) : _isHoveringController = StreamController()..add(false) {
+  }) {
+    _isHoveringController = StreamController()..add(false);
     _isHovering = _isHoveringController.stream.asBroadcastStream();
   }
 
