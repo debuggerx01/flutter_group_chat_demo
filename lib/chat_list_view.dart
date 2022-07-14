@@ -2,14 +2,14 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_group_chat_demo/chat_list_view_controller.dart';
 
-typedef OnAddChatItemHandler<T> = void Function(T item);
+typedef OnAddMessageItemHandler<T> = void Function(T item);
 typedef OnClearHandler = void Function();
 typedef OnJumpToBottom = void Function();
-typedef ChatItemComparator<T> = bool Function(T a, T b);
+typedef MessageItemComparator<T> = bool Function(T a, T b);
 typedef ChatMessageWidgetBuilder<T> = Widget Function(T item);
 
 class ChatListView<T> extends StatefulWidget {
-  final ChatListController<T> chatListController;
+  final MessageListController<T> chatListController;
   final ChatMessageWidgetBuilder<T> itemBuilder;
 
   const ChatListView({
@@ -28,43 +28,46 @@ class _ChatListViewState<T> extends State<ChatListView<T>> {
   late ScrollController _activeScrollController;
   Drag? _drag;
 
-  final List<T> chatList = [];
-  final List<T> backLogChatList = [];
+  final List<T> chatMessageList = [];
+  final List<T> backLogList = [];
 
   bool get hovering =>
       (_listViewScrollController.hasClients && _listViewScrollController.offset > 0) ||
       (_singleChildScrollController.hasClients && _singleChildScrollController.position.extentAfter > 0);
 
+  bool _preIsHovering = false;
+
   @override
   void initState() {
     widget.chatListController.setupHandlers(
-      handleAddChatItem: (item) {
-        var existedIndex = backLogChatList.indexWhere(
-          (element) => widget.chatListController.chatItemComparator(element, item),
+      handleAddMessageItem: (item) {
+        var existedIndex = backLogList.indexWhere(
+          (element) => widget.chatListController.messageItemComparator(element, item),
         );
         if (existedIndex > -1) {
           return setState(() {
-            backLogChatList[existedIndex] = item;
+            backLogList[existedIndex] = item;
           });
         }
-        existedIndex = chatList.indexWhere((element) => widget.chatListController.chatItemComparator(element, item));
+        existedIndex =
+            chatMessageList.indexWhere((element) => widget.chatListController.messageItemComparator(element, item));
         if (existedIndex > -1) {
           return setState(() {
-            chatList[existedIndex] = item;
+            chatMessageList[existedIndex] = item;
           });
         }
         setState(() {
           if (hovering) {
-            backLogChatList.add(item);
+            backLogList.add(item);
           } else {
-            chatList.insert(0, item);
+            chatMessageList.insert(0, item);
           }
         });
       },
       handleClear: () {
         setState(() {
-          chatList.clear();
-          backLogChatList.clear();
+          chatMessageList.clear();
+          backLogList.clear();
         });
       },
       handleJumpToBottom: () {
@@ -81,7 +84,7 @@ class _ChatListViewState<T> extends State<ChatListView<T>> {
   Widget build(BuildContext context) {
     return Expanded(
       child: SizedBox.expand(
-        child: chatList.isEmpty
+        child: chatMessageList.isEmpty
             ? Container()
             : LayoutBuilder(builder: (context, constrains) {
                 return RawGestureDetector(
@@ -100,7 +103,14 @@ class _ChatListViewState<T> extends State<ChatListView<T>> {
                       if (notification is ScrollEndNotification && notification.metrics.extentAfter == 0.0) {
                         WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
                           handleClearBackLogList();
+                          widget.chatListController.updateHoveringStatus(false);
+                          _preIsHovering = false;
                         });
+                      } else {
+                        if (_preIsHovering != hovering) {
+                          widget.chatListController.updateHoveringStatus(hovering);
+                        }
+                        _preIsHovering = hovering;
                       }
                       return true;
                     },
@@ -114,15 +124,15 @@ class _ChatListViewState<T> extends State<ChatListView<T>> {
                             child: ListView.builder(
                               physics: const NeverScrollableScrollPhysics(),
                               controller: _listViewScrollController,
-                              itemCount: chatList.length,
+                              itemCount: chatMessageList.length,
                               reverse: true,
-                              itemBuilder: (context, index) => widget.itemBuilder(chatList[index]),
+                              itemBuilder: (context, index) => widget.itemBuilder(chatMessageList[index]),
                             ),
                           ),
                           Container(
                             color: Colors.yellow,
                             child: Column(
-                              children: backLogChatList.map(widget.itemBuilder).toList(),
+                              children: backLogList.map(widget.itemBuilder).toList(),
                             ),
                           ),
                         ],
@@ -135,7 +145,7 @@ class _ChatListViewState<T> extends State<ChatListView<T>> {
     );
   }
 
-  final _voidCallback = () {};
+  void _voidCallback() {}
 
   void _handleDragUpdate(DragUpdateDetails details) {
     late ScrollController _preferScrollController;
@@ -189,8 +199,8 @@ class _ChatListViewState<T> extends State<ChatListView<T>> {
       if (_singleChildScrollController.hasClients) {
         _singleChildScrollController.position.jumpTo(0);
       }
-      chatList.insertAll(0, backLogChatList.reversed);
-      backLogChatList.clear();
+      chatMessageList.insertAll(0, backLogList.reversed);
+      backLogList.clear();
     });
   }
 }

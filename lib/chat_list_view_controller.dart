@@ -1,25 +1,37 @@
+import 'dart:async';
+
 import 'package:flutter_group_chat_demo/chat_list_view.dart';
 
-class ChatListController<T> {
-  late OnAddChatItemHandler<T> _onAddChatItemHandler;
+class MessageListController<T> {
+  late OnAddMessageItemHandler<T> _onAddMessageItemHandler;
   late OnClearHandler _onClearHandler;
   late OnJumpToBottom _onJumpToBottom;
-  final ChatItemComparator<T> chatItemComparator;
+  final MessageItemComparator<T> messageItemComparator;
+  late StreamController<bool> _isHoveringController;
+  late Stream<bool> _isHovering;
 
-  ChatListController({
-    required this.chatItemComparator,
-  });
+  MessageListController({
+    required this.messageItemComparator,
+  }) : _isHoveringController = StreamController()..add(false) {
+    _isHovering = _isHoveringController.stream.asBroadcastStream();
+  }
 
-  void addChatItem(T item) => _onAddChatItemHandler.call(item);
+  void updateHoveringStatus(bool hovering) {
+    _isHoveringController.add(hovering);
+  }
+
+  void addMessageItem(T item) => _onAddMessageItemHandler.call(item);
 
   void clear() => _onClearHandler.call();
 
+  Stream<bool> get isHovering => _isHovering;
+
   void setupHandlers({
-    required OnAddChatItemHandler<T> handleAddChatItem,
+    required OnAddMessageItemHandler<T> handleAddMessageItem,
     required OnClearHandler handleClear,
     required OnJumpToBottom handleJumpToBottom,
   }) {
-    this._onAddChatItemHandler = handleAddChatItem;
+    this._onAddMessageItemHandler = handleAddMessageItem;
     this._onClearHandler = handleClear;
     this._onJumpToBottom = handleJumpToBottom;
   }

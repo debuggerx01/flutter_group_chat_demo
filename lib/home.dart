@@ -8,12 +8,12 @@ import 'package:flutter_group_chat_demo/chat_list_view_controller.dart';
 int counter = 0;
 
 @immutable
-class ChatItem {
+class MessageItem {
   final bool isSelf;
   final String content;
   final DateTime timeStamp;
 
-  const ChatItem({
+  const MessageItem({
     required this.isSelf,
     required this.content,
     required this.timeStamp,
@@ -31,13 +31,16 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   final TextEditingController _textEditingController = TextEditingController();
-  final ChatListController<ChatItem> _chatListController = ChatListController<ChatItem>(
-    chatItemComparator: (a, b) => a.timeStamp == b.timeStamp,
+  final MessageListController<MessageItem> _messageListController = MessageListController<MessageItem>(
+    messageItemComparator: (a, b) => a.timeStamp == b.timeStamp,
   );
 
   @override
   void initState() {
     super.initState();
+    _messageListController.isHovering.listen((event) {
+      print('isHovering: $event');
+    });
   }
 
   @override
@@ -48,31 +51,31 @@ class _MyHomePageState extends State<MyHomePage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.arrow_downward_outlined),
-            onPressed: _chatListController.jumpToBottom,
+            onPressed: _messageListController.jumpToBottom,
           ),
           IconButton(
             icon: const Icon(Icons.delete_forever_outlined),
-            onPressed: _chatListController.clear,
+            onPressed: _messageListController.clear,
           ),
         ],
       ),
       body: Column(
         children: [
-          ChatListView<ChatItem>(
-            chatListController: _chatListController,
-            itemBuilder: (chatItem) => GestureDetector(
+          ChatListView<MessageItem>(
+            chatListController: _messageListController,
+            itemBuilder: (item) => GestureDetector(
               onTap: () {
-                _chatListController.addChatItem(ChatItem(
-                    isSelf: chatItem.isSelf,
-                    content: '${chatItem.content.split(':').first}: DebuggerX',
-                    timeStamp: chatItem.timeStamp));
+                _messageListController.addMessageItem(MessageItem(
+                    isSelf: item.isSelf,
+                    content: '${item.content.split(':').first}: DebuggerX',
+                    timeStamp: item.timeStamp));
               },
               child: BubbleSpecialOne(
-                text: chatItem.content,
-                color: chatItem.isSelf ? const Color(0xFF1B97F3) : const Color(0xFFA3A3A4),
+                text: item.content,
+                color: item.isSelf ? const Color(0xFF1B97F3) : const Color(0xFFA3A3A4),
                 textStyle: const TextStyle(color: Colors.white, fontSize: 16),
-                isSender: chatItem.isSelf,
-                key: Key(chatItem.timeStamp.toIso8601String()),
+                isSender: item.isSelf,
+                key: Key(item.timeStamp.toIso8601String()),
               ),
             ),
           ),
@@ -96,10 +99,10 @@ class _MyHomePageState extends State<MyHomePage> {
                   onPressed: () {
                     var content = _textEditingController.text.trim();
                     if (content.isNotEmpty) {
-                      _chatListController.jumpToBottom();
+                      _messageListController.jumpToBottom();
                       WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-                        _chatListController.addChatItem(
-                          (ChatItem(isSelf: true, content: content, timeStamp: DateTime.now())),
+                        _messageListController.addMessageItem(
+                          (MessageItem(isSelf: true, content: content, timeStamp: DateTime.now())),
                         );
                         _mockGroupMessage();
                       });
@@ -124,8 +127,8 @@ class _MyHomePageState extends State<MyHomePage> {
       if (count < 0) return false;
       await Future.delayed(
         Duration(milliseconds: random.nextInt(1000) + 100),
-        () => _chatListController.addChatItem(
-          ChatItem(
+        () => _messageListController.addMessageItem(
+          MessageItem(
               isSelf: false, content: '${++counter} : ${mock.string(min: 20, max: 100)}', timeStamp: DateTime.now()),
         ),
       );
